@@ -13,7 +13,7 @@ fi
 # Read the input file line by line
 while IFS=',' read -r param1 param2; do
     if [ -n "$param1" ] && [ -n "$param2" ]; then
-        # Run bgpq4 to fetch the prefixes, with ASN $param1 and AS-SET $param2 as arguments
+        # Run the python to push the configs to the Juniper box
 	python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv4
 	python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv6
     fi
