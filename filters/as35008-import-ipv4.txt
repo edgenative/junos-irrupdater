@@ -1,0 +1,16 @@
+policy-options {
+policy-statement as35008-import-ipv4 {
+apply-flags omit;
+	term prefixes {
+		from {
+			route-filter 23.153.56.0/24 exact;
+			route-filter 194.15.141.0/24 exact;
+			route-filter 194.246.109.0/24 exact;
+		}
+		then next term;
+	}
+	term reject {
+		then reject;
+	}
+}
+}
