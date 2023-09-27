@@ -6,7 +6,7 @@ from jnpr.junos.utils.config import Config
 import os
 import json
 import difflib
-import sys  # Add sys module for command-line arguments
+import sys
 
 def read_router_config_for_policy(router_info, policy_name):
     router = None  # Initialize router as None
@@ -21,7 +21,8 @@ def read_router_config_for_policy(router_info, policy_name):
             router.close()
 
 def normalize_policy_content(policy_content, ignore_first_last_lines=False):
-    # Normalize indentation and formatting
+    # Normalize indentation and formatting, ignore the first 2 and last 2 lines, so we're
+    # only comparing the contents of the filter with the router config
     lines = policy_content.strip().split('\n')
     if ignore_first_last_lines and len(lines) > 4:
         lines = lines[2:-2]
@@ -29,6 +30,8 @@ def normalize_policy_content(policy_content, ignore_first_last_lines=False):
     return normalized_content
 
 def delete_hierarchy_on_router(router_info, policy_name):
+    # If the config is different, we need to delete the existing policy before
+    # pushing an update
     try:
         router = Device(**router_info)
         router.open()
@@ -118,7 +121,7 @@ def main():
     print(f"Hostname: {hostname}")
     with open("/usr/share/junos-irrupdater/config/routers.conf", "r") as config_file:
         router_info = json.load(config_file)
-        router_info["host"] = hostname  # Update the host from command line
+        router_info["host"] = hostname
 
     policy_files_directory = "/usr/share/junos-irrupdater/filters"
 
