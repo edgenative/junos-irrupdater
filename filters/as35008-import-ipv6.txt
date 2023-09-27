@@ -1,0 +1,16 @@
+policy-options {
+policy-statement as35008-import-ipv6 {
+apply-flags omit;
+  term prefixes {
+		from {
+			route-filter 2001:67c:760::/48 exact;
+			route-filter 2602:2d5::/40 upto /48;
+			route-filter 2602:2d5:f0::/47 upto /48;
+		}
+		then next term;
+  }
+  term reject {
+          then reject;
+  }
+}
+}
