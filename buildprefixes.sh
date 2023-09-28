@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script for generating BGP filter for Mikrotik RouterOS
+# Script for generating BGP filters for Juniper JunOS
 # (c) 2023 Lee Hetherington <lee@edgenative.net>
 
 
