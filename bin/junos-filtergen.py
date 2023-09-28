@@ -1,14 +1,3 @@
-#!/bin/bash
-# Script for generating BGP filter for Mikrotik RouterOS
-# (c) 2023 Lee Hetherington <lee@edgenative.net>
-
-path=/usr/share/junos-irrupdater
-
-bgpq4 -F '%n/%l \n' -4 -A $2 > $path/db/$1.4.agg
-bgpq4 -F '%n/%l \n' -6 -A $2 > $path/db/$1.6.agg
-root@flow:/usr/share/junos-irrupdater/bin# ls
-fetchprefixes.sh  junos-filtergen.py  junos-irrupdater.py
-root@flow:/usr/share/junos-irrupdater/bin# cat junos-filtergen.py
 #!/usr/bin/env python3
 # Script for generating BGP filters for Juniper JunOS
 # (c) 2023 Lee Hetherington <lee@edgenative.net>
