@@ -25,7 +25,7 @@ def generate_ipv4_filter(asn):
                 elif masklength < 24:
                     f.write(f"			route-filter {prefix} upto /24;\n")
         f.write("		}\n")
-        f.write("		then next term;\n")
+        f.write("		then next policy;\n")
         f.write("	}\n")
         f.write("	term reject {\n")
         f.write("		then reject;\n")
@@ -49,7 +49,7 @@ def generate_ipv6_filter(asn):
                 elif masklength6 < 48:
                     f.write(f"			route-filter {prefix6} upto /48;\n")
         f.write("		}\n")
-        f.write("		then next term;\n")
+        f.write("		then next policy;\n")
         f.write("  }\n")
         f.write("  term reject {\n")
         f.write("          then reject;\n")
