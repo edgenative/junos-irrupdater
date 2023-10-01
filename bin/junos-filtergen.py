@@ -3,11 +3,6 @@
 # (c) 2023 Lee Hetherington <lee@edgenative.net>
 #
 
-#!/usr/bin/env python3
-# Script for generating BGP filters for Juniper JunOS
-# (c) 2023 Lee Hetherington <lee@edgenative.net>
-#
-
 import os
 import sys
 
