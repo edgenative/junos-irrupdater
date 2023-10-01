@@ -21,8 +21,7 @@ def read_router_config_for_policy(router_info, policy_name):
             router.close()
 
 def normalize_policy_content(policy_content, ignore_first_last_lines=False):
-    # Normalize indentation and formatting, ignore the first 2 and last 2 lines, so we're
-    # only comparing the contents of the filter with the router config
+    # Normalize indentation and formatting, ignore the first 2 and last 2 lines during comparisons
     lines = policy_content.strip().split('\n')
     if ignore_first_last_lines and len(lines) > 4:
         lines = lines[2:-2]
@@ -30,15 +29,13 @@ def normalize_policy_content(policy_content, ignore_first_last_lines=False):
     return normalized_content
 
 def delete_hierarchy_on_router(router_info, policy_name):
-    # If the config is different, we need to delete the existing policy before
-    # pushing an update
+    # Delete the existing policy on the router
     try:
         router = Device(**router_info)
         router.open()
         with Config(router, mode='exclusive') as cu:
             hierarchy_path = f'policy-options policy-statement {policy_name}'
             cu.load(f'delete {hierarchy_path}', format="set")
-            cu.commit()
     except Exception as e:
         print(f"Error deleting hierarchy for {policy_name}: {e}")
     finally:
@@ -101,7 +98,6 @@ def update_policy_statements(router_info, policy_files_directory, filter_name):
                         router.open()
                         with Config(router) as cu:
                             cu.load(policy_content, format="text")
-                            cu.commit()
                         print(f"Updated policy from {filename}")
                     except Exception as e:
                         print(f"Error updating {filename}: {e}")
@@ -126,7 +122,6 @@ def main():
     policy_files_directory = "/usr/share/junos-irrupdater/filters"
 
     update_policy_statements(router_info, policy_files_directory, filter_name)
-
 
 if __name__ == "__main__":
     main()
