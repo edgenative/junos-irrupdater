@@ -111,9 +111,9 @@ def main():
     if len(sys.argv) != 3:
         print("Usage: python junos-irrupdater.py <hostname> <filtername>")
         sys.exit(1)
-
     hostname = sys.argv[1]
     filter_name = sys.argv[2]
+    print("----------------------------------------------------------")
     print(f"Hostname: {hostname}")
     with open("/usr/share/junos-irrupdater/config/routers.conf", "r") as config_file:
         router_info = json.load(config_file)
