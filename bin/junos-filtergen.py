@@ -3,6 +3,11 @@
 # (c) 2023 Lee Hetherington <lee@edgenative.net>
 #
 
+#!/usr/bin/env python3
+# Script for generating BGP filters for Juniper JunOS
+# (c) 2023 Lee Hetherington <lee@edgenative.net>
+#
+
 import os
 import sys
 
@@ -10,6 +15,7 @@ import sys
 path = "/usr/share/junos-irrupdater"
 
 def generate_ipv4_filter(asn):
+    prefix_set = set()  # Create a set to store unique prefixes
     with open(f"{path}/filters/as{asn}-import-ipv4.txt", "w") as f:
         f.write("policy-options {\n")
         f.write(f"policy-statement as{asn}-import-ipv4 {{\n")
@@ -20,10 +26,12 @@ def generate_ipv4_filter(asn):
             for prefix in prefixes:
                 prefix = prefix.strip()
                 masklength = int(prefix.split("/")[1])
-                if masklength == 24:
-                    f.write(f"			route-filter {prefix} exact;\n")
-                elif masklength < 24:
-                    f.write(f"			route-filter {prefix} upto /24;\n")
+                if prefix not in prefix_set:  # Check if the prefix is not in the set
+                    prefix_set.add(prefix)  # Add the prefix to the set
+                    if masklength == 24:
+                        f.write(f"			route-filter {prefix} exact;\n")
+                    elif masklength < 24:
+                        f.write(f"			route-filter {prefix} upto /24;\n")
         f.write("		}\n")
         f.write("		then next policy;\n")
         f.write("	}\n")
@@ -34,6 +42,7 @@ def generate_ipv4_filter(asn):
         f.write("}\n")
 
 def generate_ipv6_filter(asn):
+    prefix_set = set()  # Create a set to store unique prefixes
     with open(f"{path}/filters/as{asn}-import-ipv6.txt", "w") as f:
         f.write("policy-options {\n")
         f.write(f"policy-statement as{asn}-import-ipv6 {{\n")
@@ -44,10 +53,12 @@ def generate_ipv6_filter(asn):
             for prefix6 in prefixes6:
                 prefix6 = prefix6.strip()
                 masklength6 = int(prefix6.split("/")[1])
-                if masklength6 == 48:
-                    f.write(f"			route-filter {prefix6} exact;\n")
-                elif masklength6 < 48:
-                    f.write(f"			route-filter {prefix6} upto /48;\n")
+                if prefix6 not in prefix_set:  # Check if the prefix is not in the set
+                    prefix_set.add(prefix6)  # Add the prefix to the set
+                    if masklength6 == 48:
+                        f.write(f"			route-filter {prefix6} exact;\n")
+                    elif masklength6 < 48:
+                        f.write(f"			route-filter {prefix6} upto /48;\n")
         f.write("		}\n")
         f.write("		then next policy;\n")
         f.write("  }\n")
@@ -56,6 +67,7 @@ def generate_ipv6_filter(asn):
         f.write("  }\n")
         f.write("}\n")
         f.write("}\n")
+
 
 if __name__ == "__main__":
     if len(sys.argv) != 2:
