@@ -1,5 +1,5 @@
 #!/bin/bash
-# Script for generating BGP filters for Juniper JunOS
+# Script for generating BGP filter for Juniper Routers
 # (c) 2023 Lee Hetherington <lee@edgenative.net>
 
 
@@ -15,6 +15,7 @@ fi
 while IFS=',' read -r param1 param2; do
     if [ -n "$param1" ] && [ -n "$param2" ]; then
         # Run bgpq4 to fetch the prefixes, with ASN $param1 and AS-SET $param2 as arguments
+        echo "Running BGPQ4 for as$param1 $param2..."
         $path/bin/fetchprefixes.sh "$param1" "$param2"
     fi
 done < $path/config/peers.conf
@@ -29,6 +30,7 @@ fi
 while IFS=',' read -r param1 param2; do
     if [ -n "$param1" ]; then
         # Run filtergen with ASN $param1 as arguments
+        echo "Generating filters for as$param1..."
         python3 $path/bin/junos-filtergen.py "$param1"
     fi
 done < $path/config/sessions.conf
