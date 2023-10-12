@@ -40,7 +40,7 @@ The scripts here generate filters that can be used as part of your policy chain.
 - ```as32934-import-ipv4``` for Facebook on IPv4
 - ```as32934-import-ipv6``` for Facebook on IPv6
 
-The filter has two terms.  One to parse through the prefixes and move to the next term upon matching, and another which is a reject.  So using this as the first filter in your chain, will match the prefixes, and then skip to your next policy-statement in the chain upon a match (We're also aggregating the prefixes here, and allowing upto a /24 in IPv4 and a /48 in IPv6) or simply reject if the prefix doesn't match.
+The filter has two terms.  One to parse through the prefixes and move to the next policy in the chain upon matching, and another which is a reject.  So using this as the first filter in your chain, will match the prefixes, and then skip to your next policy-statement in the chain upon a match (We're also aggregating the prefixes here, and allowing upto a /24 in IPv4 and a /48 in IPv6) or simply reject if the prefix doesn't match.
 
 
 #### What else?
