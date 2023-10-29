@@ -67,7 +67,7 @@ def update_policy_statements(router_info, policy_files_directory, filter_name):
                     router.open()
                     with Config(router) as cu:
                         cu.load(policy_content, format="text")
-                        cu.commit()
+                        cu.commit(timeout=360)
                     print(f"Inserted policy from {filename}")
                 except Exception as e:
                     print(f"Error inserting {filename}: {e}")
