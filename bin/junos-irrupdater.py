@@ -65,7 +65,7 @@ def update_policy_statements(router_info, policy_files_directory, filter_name):
                 try:
                     router = Device(**router_info)
                     router.open()
-                    with Config(router) as cu:
+                    with Config(router, mode='exclusive') as cu:
                         cu.load(policy_content, format="text")
                         cu.commit(timeout=360)
                     print(f"Inserted policy from {filename}")
@@ -96,7 +96,7 @@ def update_policy_statements(router_info, policy_files_directory, filter_name):
                     try:
                         router = Device(**router_info)
                         router.open()
-                        with Config(router) as cu:
+                        with Config(router, mode='exclusive') as cu:
                             cu.load(policy_content, format="text")
                         print(f"Updated policy from {filename}")
                     except Exception as e:
