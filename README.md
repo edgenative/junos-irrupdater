@@ -6,7 +6,7 @@ Update IRR Routing Filters on a Juniper Router running Junos
 #### Prerequisits
 
 - Juniper router(s) running Junos
-- Netconf enabled on SSH
+- Netconf enabled on SSH (and required ports open tcp/830)
 - [Juniper JunOS Py-JunOS-Eznc Python Packages](https://github.com/Juniper/py-junos-eznc) on your host
 - BGPQ4 installed on the host where you plan to run these scripts (Debian/Ubuntu apt-get install bgpq4)
 
