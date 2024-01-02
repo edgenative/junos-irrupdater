@@ -21,6 +21,7 @@ We've included everything you need to make this pretty self-contained and so the
 This collection has everything you need in one place.  You need to configure a couple of things here.  We're expecting you to install this into ```/usr/share/junos-irrupdater/``` on your host;
 
 - ```config/routers.conf``` specify here the username and password required to interact with your router.
+- ```config/email.conf``` specify here the details of your email server, recipient and sender.  You can also choose to enable emails upon update, and/or upon error.
 - ```config/peers.conf``` specify here, as comma separated lines the ASN and AS-SET of your peers.  You'll need todo this everytime you add a new peer that you need filters for.
 - ```config/sessions.conf``` this file contains the combination of the ASN and the router hostname/ip it's on.  You'll need to update this everytime you setup a new peer on an IX/PNI/New Router.
 
