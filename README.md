@@ -50,7 +50,7 @@ The filter has two terms.  One to parse through the prefixes and move to the nex
 
 #### Maintain other filters on the router?
 
-Sure.  I'm actually using this to maintain all of the import/export filters for BGP on my routers.  Simply create your policy in the ```filters/``` directory, in standard JunOS format (with .txt as the file extension) and follow the examples above to place the right combination of router name and policy name in the ```config/other-policies.conf``` file.  Then running ```push-other-policies.sh``` script on a schedule to loop through these.
+Sure.  I'm actually using this to maintain all of the import/export filters for BGP on my routers.  Simply create your policy in the ```filters/``` directory, in standard JunOS format (with .txt as the file extension - the filename must match the filter name e.g. example-filter must be example-filter.txt) and follow the examples above to place the right combination of router name and policy name in the ```config/other-policies.conf``` file.  Then running ```push-other-policies.sh``` script on a schedule to loop through these.
 
 I've given an example in the ```filters/``` directory of the policy format.  Note that the scripts will only push things in the ``` policy-options policy-statement <policy-name>``` heirarchy. You could modify the ```bin/junos-irrupdater.py``` file if you wanted to extend this to other parts of the config.
 
