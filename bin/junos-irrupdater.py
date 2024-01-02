@@ -11,6 +11,8 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
+path = "/usr/share/junos-irrupdater"
+
 def read_router_config_for_policy(router_info, policy_name):
     router = None
     try:
@@ -155,14 +157,14 @@ def main():
     print("----------------------------------------------------------")
     print(f"Hostname: {hostname}")
 
-    with open("/usr/share/junos-irrupdater/config/routers.conf", "r") as config_file:
+    with open(f"{path}/config/routers.conf", "r") as config_file:
         router_info = json.load(config_file)
         router_info["host"] = hostname
 
-    with open("/usr/share/junos-irrupdater/config/email.conf", "r") as email_config_file:
+    with open(f"{path}/config/email.conf", "r") as email_config_file:
         email_config = json.load(email_config_file)
 
-    policy_files_directory = "/usr/share/junos-irrupdater/filters"
+    policy_files_directory = f"{path}/filters"
 
     update_policy_statements(router_info, policy_files_directory, filter_name, email_config)
 
