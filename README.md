@@ -1,7 +1,7 @@
 
 # junos-irrupdater
 
-Update IRR Routing Filters on a Juniper Router running Junos
+Create and Maintain Routing Filters on a Juniper Router running Junos
 
 #### Prerequisits
 
