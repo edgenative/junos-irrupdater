@@ -1,0 +1,5 @@
+policy-options {
+policy-statement example-filter {
+then reject;
+}
+}
