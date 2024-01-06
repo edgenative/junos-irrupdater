@@ -41,6 +41,13 @@ def update_policy(router, policy_name, policy_content):
         cu.load(policy_content, format="text")
         cu.commit(timeout=360)
 
+def add_policy(router, policy_name, policy_content):
+    # Update the policy on the router.  Do this with configure exclusive
+    with Config(router, mode='exclusive') as cu:
+        hierarchy_path = f'policy-options policy-statement {policy_name}'
+        cu.load(policy_content, format="text")
+        cu.commit(timeout=360)
+
 def update_policy_statements(router_info, policy_files_directory, filter_name, email_config):
     # This function deletes the existing policy, then inserts the new policy after which it runs a commit.  We're doing this with configure exclusive
     # to avoid any errors.  Had to have this happen in a single function, as before it wasn't actually deleteting the old policy when there was a change
@@ -70,7 +77,7 @@ def update_policy_statements(router_info, policy_files_directory, filter_name, e
                 try:
                     router = Device(**router_info)
                     router.open()
-                    update_policy(router, policy_name, policy_content)
+                    add_policy(router, policy_name, policy_content)
                     print(f"Inserted policy {policy_name} from {filename}")
 
                     if send_updates:
