@@ -11,10 +11,22 @@ if [ ! -f $path/config/sessions.conf ]; then
 fi
 
 # Read the input file line by line
-while IFS=',' read -r param1 param2; do
+while IFS=',' read -r param1 param2 param3; do
     if [ -n "$param1" ] && [ -n "$param2" ]; then
-        # Run the python to push the configs to the Juniper box
-	python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv4
-	python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv6
+        if [ -n "$param3" ]; then
+            if [ "$param3" = "ipv4" ]; then
+                # Run for IPv4 only
+                python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv4
+            elif [ "$param3" = "ipv6" ]; then
+                # Run for IPv6 only
+                python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv6
+            else
+                echo "Invalid value for affinity: $param3"
+            fi
+        else
+            # Run for both IPv4 and IPv6
+            python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv4
+            python3 $path/bin/junos-irrupdater.py $param2 as$param1-import-ipv6
+        fi
     fi
 done < $path/config/sessions.conf
