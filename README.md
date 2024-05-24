@@ -63,3 +63,6 @@ I've given an example in the ```filters/``` directory of the policy format.  Not
 #### Was this useful?
 
 Let me know, I'd love to hear from you!
+
+#### Non-Public Version
+I'm running a modified version of this internally, which supports generating export filters for your own as-set incase you want to filter your exports, it also supports generating customer filters along side peer, so you can accept longer prefixes incase of rtbh on ipv4 /32 for example.  Let me know if you'd like a copy of those modifications.
