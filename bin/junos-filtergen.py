@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # Script for generating BGP filters for Juniper JunOS
-# (c) 2023 Lee Hetherington <lee@edgenative.net>
+# (c) 2023-2025 Lee Hetherington <lee@edgenative.net>
 #
 
 import os

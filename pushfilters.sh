@@ -1,6 +1,6 @@
 #!/bin/bash
 # Script for generating BGP filters for Juniper Routers
-# (c) 2023 Lee Hetherington <lee@edgenative.net>
+# (c) 2023-2025 Lee Hetherington <lee@edgenative.net>
 
 path=/usr/share/junos-irrupdater
 

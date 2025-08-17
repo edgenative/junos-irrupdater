@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2024 - Lee Hetherington <lee@edgenative.net>
+# Copyright (c) 2023-2025 - Lee Hetherington <lee@edgenative.net>
 # Script: junos-irrupdater.py
 
 from jnpr.junos import Device

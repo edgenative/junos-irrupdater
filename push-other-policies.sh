@@ -1,5 +1,5 @@
 #!/bin/bash
-# (c) 2023-2024 Lee Hetherington <lee@edgenative.net>
+# (c) 2023-2025 Lee Hetherington <lee@edgenative.net>
 #
 # Create your policies in the filters directory, ending in .txt
 # Edit the config/other-policies.conf file to list router,policyname (Without the .txt)
