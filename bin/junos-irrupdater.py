@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2026 - Lee Hetherington <lee@edgenative.net>
+# Copyright (c) 2023-2026yes  - Lee Hetherington <lee@edgenative.net>
 # Script: junos-irrupdater.py
 
 from jnpr.junos import Device
@@ -13,129 +13,100 @@ from email.mime.multipart import MIMEMultipart
 
 path = "/usr/share/junos-irrupdater"
 
-def read_router_config_for_policy(router_info, policy_name):
-    router = None
-    try:
-        router = Device(**router_info)
-        router.open()
-        hierarchy_path = f'policy-options policy-statement {policy_name}'
-        router_config = router.cli(f'show configuration {hierarchy_path}')
-        return router_config.strip()
-    finally:
-        if router:
-            router.close()
-
 def normalize_policy_content(policy_content, ignore_first_last_lines=False):
-    # Normalize the indentation anf formatting, also allow us to ignore the first and last 2 lines of the text file
+    # Normalize the indentation and formatting, also allow us to ignore the first and last 2 lines of the text file
     lines = policy_content.strip().split('\n')
     if ignore_first_last_lines and len(lines) > 4:
         lines = lines[2:-2]
-    normalized_content = '\n'.join(line.strip() for line in lines)
-    return normalized_content
+    return '\n'.join(line.strip() for line in lines)
 
-def update_policy(router, policy_name, policy_content):
-    # Update the policy on the router.  Do this with configure exclusive
+def apply_policy(router, policy_name, policy_content, delete_first=False):
+    # Apply a policy on the router using configure exclusive.
+    # If delete_first is True, removes the existing policy before loading the new one.
     with Config(router, mode='exclusive') as cu:
-        hierarchy_path = f'policy-options policy-statement {policy_name}'
-        cu.load(f'delete {hierarchy_path}', format="set")
+        if delete_first:
+            hierarchy_path = f'policy-options policy-statement {policy_name}'
+            cu.load(f'delete {hierarchy_path}', format="set")
         cu.load(policy_content, format="text")
         cu.commit(timeout=360)
 
-def add_policy(router, policy_name, policy_content):
-    # Update the policy on the router.  Do this with configure exclusive
-    with Config(router, mode='exclusive') as cu:
-        hierarchy_path = f'policy-options policy-statement {policy_name}'
-        cu.load(policy_content, format="text")
-        cu.commit(timeout=360)
-
-def update_policy_statements(router_info, policy_files_directory, filter_name, email_config):
-    # This function deletes the existing policy, then inserts the new policy after which it runs a commit.  We're doing this with configure exclusive
-    # to avoid any errors.  Had to have this happen in a single function, as before it wasn't actually deleteting the old policy when there was a change
-    # and so it was telling you it had been updated, but then every run detecting a change and never actually inserting it.
+def update_policy_statements(router, hostname, policy_files_directory, filter_name, email_config):
+    # Process all policy files matching the filter, comparing them against the router config
+    # and inserting/updating as needed. Uses configure exclusive to avoid conflicts.
     send_updates = email_config.get("send_updates", False)
     send_errors = email_config.get("send_errors", False)
-
     smtp_server = email_config.get("smtp_server", "")
     sender_email = email_config.get("sender_email", "")
     receiver_email = email_config.get("receiver_email", "")
-    hostname = sys.argv[1]
 
     for filename in os.listdir(policy_files_directory):
-        if filename.endswith(".txt") and filename.startswith(filter_name):
-            policy_name = filename.split(".")[0]
-            print(f"Checking policy {policy_name}...")
+        if not (filename.endswith(".txt") and filename.startswith(filter_name)):
+            continue
 
-            with open(os.path.join(policy_files_directory, filename), 'r') as file:
-                policy_content = file.read()
+        policy_name = filename.split(".")[0]
+        print(f"Checking policy {policy_name}...")
 
-            normalized_policy_content = normalize_policy_content(policy_content, ignore_first_last_lines=True)
-            router_config = read_router_config_for_policy(router_info, policy_name)
+        with open(os.path.join(policy_files_directory, filename), 'r') as file:
+            policy_content = file.read()
 
-            if not router_config.strip():
-                print(f"Policy hierarchy for {policy_name} does not exist on the router.")
-                print("Inserting policy...")
-                try:
-                    router = Device(**router_info)
-                    router.open()
-                    add_policy(router, policy_name, policy_content)
-                    print(f"Inserted policy {policy_name} from {filename}")
+        normalized_policy_content = normalize_policy_content(policy_content, ignore_first_last_lines=True)
 
-                    if send_updates:
-                        send_email(smtp_server, sender_email, receiver_email, f"Added Routing Policy {policy_name} on {hostname}")
+        hierarchy_path = f'policy-options policy-statement {policy_name}'
+        router_config = router.cli(f'show configuration {hierarchy_path}').strip()
 
-                except Exception as e:
-                    print(f"Error inserting {policy_name}: {e}")
-                    if send_errors:
-                        send_email(smtp_server, sender_email, receiver_email, f"Error inserting {policy_name}: {e} on {hostname}")
-                finally:
-                    if router:
-                        router.close()
-            else:
-                normalized_router_config = normalize_policy_content(router_config)
+        if not router_config:
+            # Policy doesn't exist on router — insert it
+            action = "insert"
+            action_past = "Inserted"
+            email_action = "Added"
+            delete_first = False
+            print(f"Policy hierarchy for {policy_name} does not exist on the router.")
+            print("Inserting policy...")
+        else:
+            normalized_router_config = normalize_policy_content(router_config)
 
-                if normalized_policy_content.strip() != normalized_router_config.strip():
-                    print(f"Policy content for {filename} differs from router config.")
-                    print("Difference:")
-                    d = difflib.Differ()
-                    diff = list(d.compare(
-                        normalized_policy_content.splitlines(),
-                        normalized_router_config.splitlines()
-                    ))
-                    for line in diff:
-                        if line.startswith('- ') or line.startswith('+ '):
-                            print(line)
-                    print("Deleting and updating policy...")
+            if normalized_policy_content == normalized_router_config:
+                print(f"Policy Statement {policy_name} is up to date.")
+                continue
 
-                    try:
-                        router = Device(**router_info)
-                        router.open()
-                        update_policy(router, policy_name, policy_content)
-                        print(f"Updated policy statement from {filename}")
+            # Policy exists but differs — show diff and update
+            action = "update"
+            action_past = "Updated"
+            email_action = "Updated"
+            delete_first = True
+            print(f"Policy content for {filename} differs from router config.")
+            print("Difference:")
+            diff = difflib.unified_diff(
+                normalized_router_config.splitlines(),
+                normalized_policy_content.splitlines(),
+                fromfile="router",
+                tofile="file",
+                lineterm=""
+            )
+            for line in diff:
+                print(line)
+            print("Deleting and updating policy...")
 
-                        if send_updates:
-                             # Send an email upon update if enabled, that includes the policy_name and hostname of the router
-                            send_email(smtp_server, sender_email, receiver_email, f"Updated Routing Policy {policy_name} on {hostname}")
-
-                    except Exception as e:
-                        print(f"Error updating {policy_name}: {e}")
-                        if send_errors:
-                            # Send an email upon error if enabled, that includes the policy_name and hostname of the router
-                            send_email(smtp_server, sender_email, receiver_email, f"Error updating {policy_name}: {e} on {hostname}")
-                    finally:
-                        if router:
-                            router.close()
-                else:
-                    print(f"Policy Statement {policy_name} is up to date.")
+        try:
+            apply_policy(router, policy_name, policy_content, delete_first=delete_first)
+            print(f"{action_past} policy {policy_name} from {filename}")
+            if send_updates:
+                send_email(smtp_server, sender_email, receiver_email,
+                           f"{email_action} Routing Policy {policy_name} on {hostname}")
+        except Exception as e:
+            print(f"Error during {action} of {policy_name}: {e}")
+            if send_errors:
+                send_email(smtp_server, sender_email, receiver_email,
+                           f"Error during {action} of {policy_name}: {e} on {hostname}")
 
 def send_email(smtp_server, sender_email, receiver_email, message):
     subject = "Routing Policy Update Notification"
-    body = message
 
     msg = MIMEMultipart()
     msg["From"] = sender_email
     msg["To"] = receiver_email
     msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
+    msg.attach(MIMEText(message, "plain"))
 
     with smtplib.SMTP(smtp_server) as server:
         server.sendmail(sender_email, receiver_email, msg.as_string())
@@ -148,6 +119,7 @@ def main():
     filter_name = sys.argv[2]
     print("----------------------------------------------------------")
     print(f"Hostname: {hostname}")
+
     with open(f"{path}/config/routers.conf", "r") as config_file:
         router_info = json.load(config_file)
         router_info["host"] = hostname
@@ -157,7 +129,12 @@ def main():
 
     policy_files_directory = f"{path}/filters"
 
-    update_policy_statements(router_info, policy_files_directory, filter_name, email_config)
+    router = Device(**router_info)
+    router.open()
+    try:
+        update_policy_statements(router, hostname, policy_files_directory, filter_name, email_config)
+    finally:
+        router.close()
 
 if __name__ == "__main__":
     main()
