@@ -60,9 +60,13 @@ I've given an example in the ```filters/``` directory of the policy format.  Not
 
 - You can help by making it better!  Whilst I've been using Juniper for years, I've recently integrated Juniper alongside Mikrotik in my personal network.  If you need a Mikrotik version of this, you can find it at [Edgenative/mikrotik-irrupdater](https://github.com/edgenative/mikrotik-irrupdater)
 
-#### Was this useful?
+#### Looking for something more?
 
-Let me know, I'd love to hear from you!
+If you’re using this tool in production, you might be interested in ispforge — a platform we’re building to take this much further:
 
-#### Non-Public Version
-I'm running a modified version of this internally, which supports generating export filters for your own as-set incase you want to filter your exports, it also supports generating customer filters along side peer, so you can accept longer prefixes incase of rtbh on ipv4 /32 for example.  Let me know if you'd like a copy of those modifications.
+- Automated IRR + RPKI handling
+- Centralized BGP policy management
+- Multi-router / multi-site support
+- Peering workflow automation
+
+We’re currently running a closed beta with a small number of ISPs [Closed Beta Signup](https://www.ispforge.com)
