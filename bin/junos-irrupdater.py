@@ -1,4 +1,4 @@
-# Copyright (c) 2023-2026yes  - Lee Hetherington <lee@edgenative.net>
+# Copyright (c) 2023-2026 - Lee Hetherington <lee@edgenative.net>
 # Script: junos-irrupdater.py
 
 from jnpr.junos import Device
@@ -12,6 +12,78 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 path = "/usr/share/junos-irrupdater"
+
+# ---------------------------------------------------------------------------
+# Local safety checks - run BEFORE anything is pushed to the router.
+#
+# Background: a full disk once left every db/*.agg file at 0 bytes. The filter
+# generator turned those into policies containing only a reject term, this
+# script saw they "differed" from the router, and pushed them. Every prefix was
+# then rejected in and out on every router. These checks make that impossible:
+#
+#   1. an empty or structurally broken policy file is never pushed
+#   2. a copy of every policy is kept in filters/last-pushed/ after a successful
+#      push (and seeded when a policy is found to be up to date)
+#   3. before pushing, the new file is compared with that copy - if it lost all
+#      of its route-filter/prefix-list entries, or more than SHRINK_REFUSE_RATIO
+#      of them (once the baseline had at least SHRINK_MIN_BASELINE entries),
+#      the push is refused and an error is reported
+#
+# A known-good large change can be pushed by setting IRRUPDATER_FORCE=1 in the
+# environment; that bypasses check 3 only. Checks 1 and 2 always apply.
+# ---------------------------------------------------------------------------
+LAST_PUSHED_DIR = f"{path}/filters/last-pushed"
+SHRINK_MIN_BASELINE = 10   # apply the ratio check only when the last pushed copy had at least this many entries
+SHRINK_REFUSE_RATIO = 0.8  # refuse when more than 80% of the entries disappeared
+PREFIX_ENTRY_KEYWORDS = ("route-filter ", "prefix-list ", "prefix-list-filter ", "source-address-filter ")
+
+def count_prefix_entries(policy_content):
+    # Number of lines in the policy that match on a prefix.
+    return sum(1 for line in policy_content.splitlines() if line.strip().startswith(PREFIX_ENTRY_KEYWORDS))
+
+def last_pushed_file(policy_name):
+    return os.path.join(LAST_PUSHED_DIR, f"{policy_name}.txt")
+
+def sanity_check_policy(policy_name, policy_content):
+    # Returns None when the policy is safe to push, otherwise a string saying why it must not be.
+    if not policy_content.strip():
+        return "policy file is empty"
+    if f"policy-statement {policy_name}" not in policy_content:
+        return f"policy file does not define policy-statement {policy_name}"
+    if policy_content.count("{") != policy_content.count("}"):
+        return "policy file has unbalanced braces (truncated write?)"
+
+    baseline = last_pushed_file(policy_name)
+    if not os.path.isfile(baseline):
+        return None
+
+    with open(baseline, "r") as f:
+        old_count = count_prefix_entries(f.read())
+    new_count = count_prefix_entries(policy_content)
+    force = os.environ.get("IRRUPDATER_FORCE") == "1"
+
+    if old_count > 0 and new_count == 0:
+        reason = f"policy lost all {old_count} prefix entries since the last push"
+    elif old_count >= SHRINK_MIN_BASELINE and new_count < old_count * (1 - SHRINK_REFUSE_RATIO):
+        reason = f"prefix entries dropped from {old_count} to {new_count} (more than {int(SHRINK_REFUSE_RATIO * 100)}% shrink)"
+    else:
+        return None
+
+    if force:
+        print(f"WARNING: {reason} - pushing anyway because IRRUPDATER_FORCE=1")
+        return None
+    return f"{reason}; refusing to push. Set IRRUPDATER_FORCE=1 to override if this is expected"
+
+def record_last_pushed(policy_name, policy_content):
+    # Remember what the router now has, so the next run has something to compare against.
+    try:
+        os.makedirs(LAST_PUSHED_DIR, exist_ok=True)
+        tmp = last_pushed_file(policy_name) + ".tmp"
+        with open(tmp, "w") as f:
+            f.write(policy_content)
+        os.replace(tmp, last_pushed_file(policy_name))
+    except OSError as e:
+        print(f"WARNING: could not record last pushed copy of {policy_name}: {e}")
 
 def normalize_policy_content(policy_content, ignore_first_last_lines=False):
     # Normalize the indentation and formatting, also allow us to ignore the first and last 2 lines of the text file
@@ -49,6 +121,14 @@ def update_policy_statements(router, hostname, policy_files_directory, filter_na
         with open(os.path.join(policy_files_directory, filename), 'r') as file:
             policy_content = file.read()
 
+        problem = sanity_check_policy(policy_name, policy_content)
+        if problem:
+            print(f"REFUSED: {policy_name} on {hostname}: {problem}")
+            if send_errors:
+                send_email(smtp_server, sender_email, receiver_email,
+                           f"REFUSED to push routing policy {policy_name} on {hostname}: {problem}")
+            continue
+
         normalized_policy_content = normalize_policy_content(policy_content, ignore_first_last_lines=True)
 
         hierarchy_path = f'policy-options policy-statement {policy_name}'
@@ -67,6 +147,7 @@ def update_policy_statements(router, hostname, policy_files_directory, filter_na
 
             if normalized_policy_content == normalized_router_config:
                 print(f"Policy Statement {policy_name} is up to date.")
+                record_last_pushed(policy_name, policy_content)
                 continue
 
             # Policy exists but differs — show diff and update
@@ -90,6 +171,7 @@ def update_policy_statements(router, hostname, policy_files_directory, filter_na
         try:
             apply_policy(router, policy_name, policy_content, delete_first=delete_first)
             print(f"{action_past} policy {policy_name} from {filename}")
+            record_last_pushed(policy_name, policy_content)
             if send_updates:
                 send_email(smtp_server, sender_email, receiver_email,
                            f"{email_action} Routing Policy {policy_name} on {hostname}")

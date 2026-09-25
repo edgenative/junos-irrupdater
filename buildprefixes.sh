@@ -5,6 +5,19 @@
 
 path=/usr/share/junos-irrupdater
 
+# Refuse to run when the disk is nearly full. bgpq4 and filtergen would otherwise
+# write empty or truncated files. The downstream scripts guard against that too,
+# but there is no point starting. Exit code 2 so a wrapper can tell this apart
+# from a per-peer failure (exit code 1).
+min_free_kb=204800  # 200 MB
+free_kb=$(df -Pk "$path" | awk 'NR==2 {print $4}')
+if [ -z "$free_kb" ] || [ "$free_kb" -lt "$min_free_kb" ]; then
+    echo "ERROR: only ${free_kb:-?} KB free on the filesystem holding $path (need $min_free_kb KB). Aborting."
+    exit 2
+fi
+
+failed=0
+
 # Check if the configuration file 'peers.conf' exists
 if [ ! -f $path/config/peers.conf ]; then
     echo "Configuration File 'peers.conf' not found."
@@ -16,7 +29,7 @@ while IFS=',' read -r param1 param2; do
     if [ -n "$param1" ] && [ -n "$param2" ]; then
         # Run bgpq4 to fetch the prefixes, with ASN $param1 and AS-SET $param2 as arguments
         echo "Running BGPQ4 for as$param1 $param2..."
-        $path/bin/fetchprefixes.sh "$param1" "$param2"
+        $path/bin/fetchprefixes.sh "$param1" "$param2" || failed=1
     fi
 done < $path/config/peers.conf
 
@@ -31,6 +44,11 @@ while IFS=',' read -r param1 param2; do
     if [ -n "$param1" ]; then
         # Run filtergen with ASN $param1 as arguments
         echo "Generating filters for as$param1..."
-        python3 $path/bin/junos-filtergen.py "$param1"
+        python3 $path/bin/junos-filtergen.py "$param1" || failed=1
     fi
 done < $path/config/sessions.conf
+
+if [ "$failed" -ne 0 ]; then
+    echo "WARNING: one or more prefix fetches or filter generations failed (see above). Those filters were left as they were."
+fi
+exit $failed
