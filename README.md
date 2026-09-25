@@ -59,3 +59,14 @@ I've given an example in the ```filters/``` directory of the policy format.  Not
 - You can customise the filters if you so wish, by editing the ```bin/junos-filtergen.py``` script, to include other terms, add communities or the such (The version I'm running locally, I'm adding an origin community per peer using large communities, which are added using the generated import filter as part of my policy chain).
 
 - You can help by making it better!  Whilst I've been using Juniper for years, I've recently integrated Juniper alongside Mikrotik in my personal network.  If you need a Mikrotik version of this, you can find it at [Edgenative/mikrotik-irrupdater](https://github.com/edgenative/mikrotik-irrupdater)
+
+#### Safety checks
+
+A full disk once left every `db/*.agg` file at 0 bytes. The filter generator turned those into policies containing only a `reject` term, and `junos-irrupdater.py` pushed them because they differed from the router. Every prefix was rejected in and out. The scripts now refuse to do that:
+
+- `buildprefixes.sh` aborts (exit code 2) when the filesystem has less than 200 MB free.
+- `bin/fetchprefixes.sh` writes bgpq4 output to a temporary file and only replaces `db/<asn>.<afi>.agg` when bgpq4 succeeded and returned at least one prefix. The previous copy is kept as `db/<asn>.<afi>.agg.prev`. Note that bgpq4 exits 0 with empty output for an unknown AS-SET or an unreachable IRR, so the exit code alone is not enough.
+- `bin/junos-filtergen.py` refuses to generate a filter from a missing or empty db file, leaves the existing filter untouched, and writes new filters atomically (temp file + rename).
+- `bin/junos-irrupdater.py` checks every policy file before pushing it. An empty file, a file that does not define the expected `policy-statement`, or one with unbalanced braces is never pushed. After each successful push (or when a policy is found to be up to date) a copy is saved in `filters/last-pushed/`. On the next run the new file is compared with that copy: if it lost all of its `route-filter`/`prefix-list` entries, or more than 80% of them (once the baseline had at least 10), the push is refused and an error email is sent if `send_errors` is enabled.
+
+If a large shrink is genuinely expected, run the push with `IRRUPDATER_FORCE=1` in the environment to bypass the comparison for that run. The empty-file and structure checks cannot be bypassed.
